@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Camera, Zap, Clock, Users, CheckCircle2, ArrowRight, BookOpen, TrendingUp, MessageSquareText, Sparkles, FileUp, MessagesSquare, Brain } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-
 const steps = [
   { id: '01', title: 'Upload your notes', desc: 'Add PDFs, scanned chapters, assignments and past papers — the AI reads them, not the open internet.' },
   { id: '02', title: 'Ask the doubt', desc: 'Student photographs or types the question. AI breaks it down step by step in under 10 seconds.' },
@@ -47,7 +46,7 @@ export default function DoubtSolveLanding() {
   const [hovering, setHovering] = useState(false);
   const [launching, setLaunching] = useState(false);
   const navigate = useNavigate();
-  
+
   useEffect(() => {
     const onScroll = () => {
       const h = document.documentElement;
@@ -154,8 +153,6 @@ export default function DoubtSolveLanding() {
         const scale = (hovering ? s * 1.12 : s) * launchPop;
         const totalRot = rot + 45 + wobble * 0.15 + loopSpin + launchSpin;
 
-
-      
         return (
           <>
             <div
@@ -221,10 +218,7 @@ export default function DoubtSolveLanding() {
             <a href="#pricing" className="hover:text-[#0A0A0A]">Pricing</a>
           </div>
           <div className="flex items-center gap-3">
-            <button
-              className="sans text-sm font-medium text-[#0A0A0A]/70 hover:text-[#0A0A0A] transition-colors"
-              onClick={() => navigate('/login')}
-            >
+            <button className="sans text-sm font-medium text-[#0A0A0A]/70 hover:text-[#0A0A0A] transition-colors" onClick={()=>navigate('/login')}>
               Login
             </button>
             <button className="sans text-sm font-medium px-4 py-2 rounded-md bg-[#0A0A0A] text-white hover:bg-[#0A0A0A]/85 transition-colors">
