@@ -46,7 +46,6 @@ export default function DoubtSolveLanding() {
   const [hovering, setHovering] = useState(false);
   const [launching, setLaunching] = useState(false);
   const navigate = useNavigate();
-
   useEffect(() => {
     const onScroll = () => {
       const h = document.documentElement;
