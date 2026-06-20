@@ -12,7 +12,7 @@ const AuthContainer = () => {
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center bg-[#F5F5F5] p-6"
+      className=" flex items-center justify-center bg-[#F5F5F5] "
       style={{ fontFamily: "'Source Serif 4', Georgia, serif" }}
     >
       <style>{FONT_IMPORT}</style>
