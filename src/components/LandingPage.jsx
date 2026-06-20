@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Camera, Zap, Clock, Users, CheckCircle2, ArrowRight, BookOpen, TrendingUp, MessageSquareText, Sparkles, FileUp, MessagesSquare, Brain } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+
 const steps = [
   { id: '01', title: 'Upload your notes', desc: 'Add PDFs, scanned chapters, assignments and past papers — the AI reads them, not the open internet.' },
   { id: '02', title: 'Ask the doubt', desc: 'Student photographs or types the question. AI breaks it down step by step in under 10 seconds.' },
@@ -8,23 +9,23 @@ const steps = [
 ];
 
 const offerings = [
-  { icon: FileUp, title: 'Upload notes', desc: 'PDFs, handwritten scans, assignments and reference books — all become searchable answer sources.' },
+  { icon: FileUp,       title: 'Upload notes',   desc: 'PDFs, handwritten scans, assignments and reference books — all become searchable answer sources.' },
   { icon: MessagesSquare, title: 'Ask questions', desc: 'Doubts asked in plain language, in any chapter sequence, get contextual answers from your own material.' },
-  { icon: Brain, title: 'AI tutor', desc: 'Concepts explained at the student\'s pace, with worked examples instead of just final answers.' },
+  { icon: Brain,        title: 'AI tutor',        desc: "Concepts explained at the student's pace, with worked examples instead of just final answers." },
 ];
 
 const stats = [
   { value: '40,000+', label: 'doubts solved daily' },
-  { value: '11 sec', label: 'average response time' },
-  { value: '94%', label: 'resolved without a teacher' },
-  { value: '6', label: 'boards & competitive exams' },
+  { value: '11 sec',  label: 'average response time' },
+  { value: '94%',     label: 'resolved without a teacher' },
+  { value: '6',       label: 'boards & competitive exams' },
 ];
 
 const features = [
-  { icon: Camera, title: 'Photo or typed doubts', desc: 'Works from a phone photo, a scanned worksheet, or text typed straight from class.' },
-  { icon: BookOpen, title: 'Synced to your curriculum', desc: 'Upload your chapter list once — solutions follow your sequence, not a generic syllabus.' },
-  { icon: Users, title: 'Teacher dashboard', desc: 'See which topics are generating the most doubts, batch by batch, before the test does.' },
-  { icon: TrendingUp, title: 'Progress for every student', desc: 'Doubt history becomes a weak-topic map parents and mentors can actually read.' },
+  { icon: Camera,     title: 'Photo or typed doubts',       desc: 'Works from a phone photo, a scanned worksheet, or text typed straight from class.' },
+  { icon: BookOpen,   title: 'Synced to your curriculum',   desc: 'Upload your chapter list once — solutions follow your sequence, not a generic syllabus.' },
+  { icon: Users,      title: 'Teacher dashboard',           desc: 'See which topics are generating the most doubts, batch by batch, before the test does.' },
+  { icon: TrendingUp, title: 'Progress for every student',  desc: 'Doubt history becomes a weak-topic map parents and mentors can actually read.' },
 ];
 
 const DoubtLine = ({ children, delay }) => {
@@ -40,39 +41,167 @@ const DoubtLine = ({ children, delay }) => {
   );
 };
 
-export default function DoubtSolveLanding() {
-  const [scrollPct, setScrollPct] = useState(0);
-  const [flutter, setFlutter] = useState(0);
-  const [hovering, setHovering] = useState(false);
-  const [launching, setLaunching] = useState(false);
-  const navigate = useNavigate();
+/* ─── Spline helpers (pure, no state) ─────────────────────────────────────── */
+const lerp  = (a, b, l) => a + (b - a) * l;
+const angle = (x1, y1, x2, y2) => (Math.atan2(y2 - y1, x2 - x1) * 180) / Math.PI;
+const ease  = (l) => (l < 0.5 ? 2 * l * l : 1 - 2 * (1 - l) * (1 - l));
+
+const P0 = { x: 5,  y: 10, z: 40, s: 1    };
+const P1 = { x: 82, y: 48, z: 0,  s: 0.95 };
+const P2 = { x: 6,  y: 50, z: 0,  s: 1.05 };
+const P3 = { x: 84, y: 14, z: 40, s: 1.6  };
+const PTS = [P0, P0, P1, P2, P3, P3];
+
+const catmullRom = (p0, p1, p2, p3, l) => {
+  const l2 = l * l, l3 = l2 * l;
+  return 0.5 * (2*p1 + (-p0+p2)*l + (2*p0-5*p1+4*p2-p3)*l2 + (-p0+3*p1-3*p2+p3)*l3);
+};
+
+const splinePoint = (t) => {
+  const segCount = PTS.length - 3;
+  const segF = Math.min(t, 0.9999) * segCount;
+  const i  = Math.floor(segF);
+  const lf = segF - i;
+  return {
+    x: catmullRom(PTS[i].x, PTS[i+1].x, PTS[i+2].x, PTS[i+3].x, lf),
+    y: catmullRom(PTS[i].y, PTS[i+1].y, PTS[i+2].y, PTS[i+3].y, lf),
+  };
+};
+
+const planeProps = (t) => {
+  const base  = splinePoint(t);
+  const ahead = splinePoint(Math.min(t + 0.008, 1));
+  const rot   = angle(base.x, base.y, ahead.x, ahead.y);
+  let z, s;
+  if (t < 0.33)      { const e = ease(t / 0.33);          z = lerp(P0.z, P1.z, e); s = lerp(P0.s, P1.s, e); }
+  else if (t < 0.66) { const l = (t - 0.33) / 0.33;       z = P1.z;                s = lerp(P1.s, P2.s, l); }
+  else               { const e = ease((t - 0.66) / 0.34);  z = lerp(P2.z, P3.z, e); s = lerp(P2.s, P3.s, e); }
+  const loopSpin = t > 0.92 ? ((t - 0.92) / 0.08) * 360 : 0;
+  return { x: base.x, y: base.y, z, s, rot: rot + 45 + loopSpin };
+};
+
+/* ─── Paper Plane (isolated, self-contained RAF) ───────────────────────────── */
+const PaperPlane = () => {
+  const planeRef   = useRef(null);
+  const shadowRef  = useRef(null);
+  const tooltipRef = useRef(null);
+  const scrollPct  = useRef(0);
+  const flutterT   = useRef(0);
+  const hovering   = useRef(false);
+  const launching  = useRef(false);
+  const launchEndRot = useRef(0); // frozen rotation at launch end
+  const rafId      = useRef(null);
+
+  const scrollToTop = useCallback(() => {
+    if (launching.current) return;
+    launching.current = true;
+    // freeze rotation so the spin doesn't jump on re-render
+    launchEndRot.current = parseFloat(planeRef.current?.style.getPropertyValue('--rot') || '0');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setTimeout(() => { launching.current = false; }, 800);
+  }, []);
+
   useEffect(() => {
+    /* ── scroll listener: use window.scrollY, reliable in all environments ── */
     const onScroll = () => {
-      const h = document.documentElement;
-      const scrolled = h.scrollTop;
-      const max = h.scrollHeight - h.clientHeight;
-      setScrollPct(max > 0 ? scrolled / max : 0);
+      const max = document.documentElement.scrollHeight - window.innerHeight;
+      scrollPct.current = max > 0 ? Math.min(window.scrollY / max, 1) : 0;
     };
     window.addEventListener('scroll', onScroll, { passive: true });
     onScroll();
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
 
-  useEffect(() => {
-    let raf;
+    /* ── single RAF loop drives both flutter AND position; zero React setState ── */
     const tick = (time) => {
-      setFlutter(time / 1000);
-      raf = requestAnimationFrame(tick);
+      flutterT.current = time / 1000;
+      const t   = scrollPct.current;
+      const ft  = flutterT.current;
+      const hov = hovering.current;
+      const lnc = launching.current;
+
+      const { x, y, z, s, rot } = planeProps(t);
+
+      const bobX   = Math.sin(ft * 1.6) * 0.5;
+      const bobY   = Math.cos(ft * 1.3) * 0.6 + (hov ? -1.5 : 0);
+      const wobble = Math.sin(ft * 2.1) * 6;
+      // launch: fixed 2-turn spin baked in, no live flutter dependency
+      const launchSpin = lnc ? ((time % 700) / 700) * 720 : 0;
+      const launchPop  = lnc ? 1.25 : 1;
+
+      const px    = x + bobX;
+      const py    = y + bobY;
+      const scale = (hov ? s * 1.12 : s) * launchPop;
+      const totalRot = rot + wobble * 0.15 + launchSpin;
+
+      if (planeRef.current) {
+        planeRef.current.style.left      = `${px}vw`;
+        planeRef.current.style.top       = `${py}vh`;
+        planeRef.current.style.transform = `translate(-50%,-50%) scale(${scale}) rotate(${totalRot}deg)`;
+        planeRef.current.style.zIndex    = Math.round(z);
+      }
+      if (shadowRef.current) {
+        const ss = scale * s;
+        shadowRef.current.style.left   = `${px}vw`;
+        shadowRef.current.style.top    = `calc(${py}vh + ${9 * ss}px)`;
+        shadowRef.current.style.width  = `${20 * ss}px`;
+        shadowRef.current.style.height = `${5  * ss}px`;
+        shadowRef.current.style.zIndex = Math.max(Math.round(z) - 1, 0);
+      }
+      if (tooltipRef.current) {
+        tooltipRef.current.style.opacity = (hov && !lnc) ? '1' : '0';
+        tooltipRef.current.style.transform = `rotate(${-totalRot}deg)`;
+      }
+
+      rafId.current = requestAnimationFrame(tick);
     };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
+
+    rafId.current = requestAnimationFrame(tick);
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      cancelAnimationFrame(rafId.current);
+    };
   }, []);
 
-  const scrollToTop = () => {
-    setLaunching(true);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    setTimeout(() => setLaunching(false), 700);
-  };
+  return (
+    <>
+      {/* Shadow */}
+      <div
+        ref={shadowRef}
+        className="hidden md:block fixed pointer-events-none rounded-full"
+        style={{
+          transform: 'translate(-50%,-50%)',
+          background: 'radial-gradient(ellipse, rgba(10,10,10,0.14) 0%, rgba(10,10,10,0) 75%)',
+          willChange: 'top, left, width, height',
+        }}
+      />
+      {/* Plane */}
+      <button
+        ref={planeRef}
+        onClick={scrollToTop}
+        onMouseEnter={() => { hovering.current = true; }}
+        onMouseLeave={() => { hovering.current = false; }}
+        aria-label="Back to top"
+        className="hidden md:flex items-center gap-2 fixed"
+        style={{ willChange: 'transform, top, left' }}
+      >
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" className="drop-shadow-md">
+          <path d="M12 2 L21 21 L12 17 L3 21 Z" fill="#FFFFFF" stroke="#0A0A0A" strokeWidth="1.4" strokeLinejoin="round" />
+          <path d="M12 2 L12 17" stroke="#0A0A0A" strokeWidth="1" />
+        </svg>
+        <span
+          ref={tooltipRef}
+          className="mono text-[10px] uppercase tracking-wider bg-[#0A0A0A] text-white px-2 py-1 rounded whitespace-nowrap transition-opacity duration-200"
+          style={{ opacity: 0 }}
+        >
+          Back to top
+        </span>
+      </button>
+    </>
+  );
+};
+
+/* ─── Main page ────────────────────────────────────────────────────────────── */
+export default function LandingPage() {
+  const navigate = useNavigate();
 
   return (
     <div className="min-h-screen bg-[#FFFFFF] text-[#0A0A0A]" style={{ fontFamily: "'Source Serif 4', Georgia, serif" }}>
@@ -82,125 +211,7 @@ export default function DoubtSolveLanding() {
         .mono { font-family: 'JetBrains Mono', monospace; }
       `}</style>
 
-      {/* Paper plane scroll journey */}
-      {(() => {
-        const t = scrollPct;
-        const lerp = (a, b, l) => a + (b - a) * l;
-        const angle = (x1, y1, x2, y2) => (Math.atan2(y2 - y1, x2 - x1) * 180) / Math.PI;
-
-        // waypoints the plane glides through, as one continuous curve (no kinks at joins)
-        const P0 = { x: 5, y: 10, z: 40, s: 1 };
-        const P1 = { x: 82, y: 48, z: 0, s: 0.95 };
-        const P2 = { x: 6, y: 50, z: 0, s: 1.05 };
-        const P3 = { x: 84, y: 14, z: 40, s: 1.6 };
-        const pts = [P0, P0, P1, P2, P3, P3]; // pad ends so the spline starts/ends exactly on P0/P3
-
-        const ease = (l) => (l < 0.5 ? 2 * l * l : 1 - 2 * (1 - l) * (1 - l)); // smoothstep, concentrates change mid-leg
-
-        // Catmull-Rom spline: smooth, continuous curve through all waypoints, no sharp turns at the joins
-        const catmullRom = (p0, p1, p2, p3, l) => {
-          const l2 = l * l, l3 = l2 * l;
-          return (
-            0.5 *
-            (2 * p1 +
-              (-p0 + p2) * l +
-              (2 * p0 - 5 * p1 + 4 * p2 - p3) * l2 +
-              (-p0 + 3 * p1 - 3 * p2 + p3) * l3)
-          );
-        };
-        const splinePoint = (l) => {
-          const segCount = pts.length - 3; // usable segments between padded points
-          const segF = l * segCount;
-          const i = Math.min(Math.floor(segF), segCount - 1);
-          const lf = segF - i;
-          return {
-            x: catmullRom(pts[i].x, pts[i + 1].x, pts[i + 2].x, pts[i + 3].x, lf),
-            y: catmullRom(pts[i].y, pts[i + 1].y, pts[i + 2].y, pts[i + 3].y, lf),
-          };
-        };
-
-        const base = splinePoint(t);
-        const ahead = splinePoint(Math.min(t + 0.01, 1)); // sample just ahead to get true tangent direction
-        const rot = angle(base.x, base.y, ahead.x, ahead.y);
-
-        let z, s;
-        if (t < 0.33) {
-          const e = ease(t / 0.33);
-          z = lerp(P0.z, P1.z, e); s = lerp(P0.s, P1.s, e);
-        } else if (t < 0.66) {
-          const l = (t - 0.33) / 0.33;
-          z = P1.z; s = lerp(P1.s, P2.s, l); // stays sunk behind through this whole leg
-        } else {
-          const e = ease((t - 0.66) / 0.34); // pops front + grows right around the middle of this leg
-          z = lerp(P2.z, P3.z, e); s = lerp(P2.s, P3.s, e);
-        }
-
-        // idle flutter: gentle bob + wing-wobble layered on top of scroll position
-        const bobX = Math.sin(flutter * 1.6) * 0.5;
-        const bobY = Math.cos(flutter * 1.3) * 0.6;
-        const wobble = Math.sin(flutter * 2.1) * 6;
-        const hoverLift = hovering ? -1.5 : 0;
-
-        // barrel-roll flourish as it nears the very top of the page
-        const loopSpin = t > 0.92 ? ((t - 0.92) / 0.08) * 360 : 0;
-        // quick extra spin + pop when clicked, before the smooth scroll takes over
-        const launchSpin = launching ? (flutter * 1400) % 360 : 0;
-        const launchPop = launching ? 1.25 : 1;
-
-        const x = base.x + bobX;
-        const y = base.y + bobY + hoverLift;
-        const scale = (hovering ? s * 1.12 : s) * launchPop;
-        const totalRot = rot + 45 + wobble * 0.15 + loopSpin + launchSpin;
-
-        return (
-          <>
-            <div
-              className="hidden md:block fixed pointer-events-none rounded-full"
-              style={{
-                left: `${x}vw`,
-                top: `calc(${y}vh + ${9 * scale}px)`,
-                width: `${20 * scale}px`,
-                height: `${5 * scale}px`,
-                transform: 'translate(-50%, -50%)',
-                background: 'radial-gradient(ellipse, rgba(10,10,10,0.14) 0%, rgba(10,10,10,0) 75%)',
-                zIndex: Math.max(z - 1, 0),
-                transition: 'top 120ms linear, left 120ms linear, width 150ms ease-out, height 150ms ease-out',
-              }}
-            />
-            <button
-              onClick={scrollToTop}
-              onMouseEnter={() => setHovering(true)}
-              onMouseLeave={() => setHovering(false)}
-              aria-label="Back to top"
-              className="hidden md:flex items-center gap-2 fixed group"
-              style={{
-                left: `${x}vw`,
-                top: `${y}vh`,
-                transform: `translate(-50%, -50%) scale(${scale}) rotate(${totalRot}deg)`,
-                zIndex: z,
-                transition: launching
-                  ? 'transform 700ms cubic-bezier(.2,.9,.3,1.2)'
-                  : 'top 120ms linear, left 120ms linear, transform 150ms ease-out',
-              }}
-            >
-              <svg width="34" height="34" viewBox="0 0 24 24" fill="none" className="drop-shadow-md">
-                <path d="M12 2 L21 21 L12 17 L3 21 Z" fill="#FFFFFF" stroke="#0A0A0A" strokeWidth="1.4" strokeLinejoin="round" />
-                <path d="M12 2 L12 17" stroke="#0A0A0A" strokeWidth="1" />
-              </svg>
-              <span
-                className="mono text-[10px] uppercase tracking-wider bg-[#0A0A0A] text-white px-2 py-1 rounded whitespace-nowrap transition-opacity duration-200"
-                style={{
-                  opacity: hovering && !launching ? 1 : 0,
-                  transform: `rotate(${-totalRot}deg)`,
-                }}
-              >
-                Back to top
-              </span>
-            </button>
-          </>
-        );
-      })()}
-
+      <PaperPlane />
 
       {/* Nav */}
       <nav className="border-b border-[#0A0A0A]/10 sticky top-0 bg-[#FFFFFF]/90 backdrop-blur z-20">
@@ -212,12 +223,12 @@ export default function DoubtSolveLanding() {
             Hal&nbsp;<span className="text-[#0A0A0A]">Karo</span>
           </div>
           <div className="hidden md:flex items-center gap-8 sans text-sm text-[#0A0A0A]/70">
-            <a href="#how" className="hover:text-[#0A0A0A]">How it works</a>
+            <a href="#how"      className="hover:text-[#0A0A0A]">How it works</a>
             <a href="#features" className="hover:text-[#0A0A0A]">Features</a>
-            <a href="#pricing" className="hover:text-[#0A0A0A]">Pricing</a>
+            <a href="#pricing"  className="hover:text-[#0A0A0A]">Pricing</a>
           </div>
           <div className="flex items-center gap-3">
-            <button className="sans text-sm font-medium text-[#0A0A0A]/70 hover:text-[#0A0A0A] transition-colors" onClick={()=>navigate('/login')}>
+            <button onClick={() => navigate('/login')} className="sans text-sm font-medium text-[#0A0A0A]/70 hover:text-[#0A0A0A] transition-colors">
               Login
             </button>
             <button className="sans text-sm font-medium px-4 py-2 rounded-md bg-[#0A0A0A] text-white hover:bg-[#0A0A0A]/85 transition-colors">
@@ -234,11 +245,8 @@ export default function DoubtSolveLanding() {
             Built for coaching centers
           </div>
           <h1 className="sans text-5xl md:text-6xl font-semibold leading-[1.05] tracking-tight">
-            Every doubt,
-            <br />
-            answered before
-            <br />
-            it <span className="text-[#0A0A0A] italic font-normal" style={{ fontFamily: "'Source Serif 4', serif" }}>cools off</span>.
+            Every doubt,<br />answered before<br />
+            it <span className="italic font-normal" style={{ fontFamily: "'Source Serif 4', serif" }}>cools off</span>.
           </h1>
           <p className="mt-6 text-lg text-[#0A0A0A]/70 max-w-md">
             Your students stop waiting for the next class to ask. They photograph the question, get a worked solution in seconds, and you keep teaching instead of repeating.
@@ -254,7 +262,6 @@ export default function DoubtSolveLanding() {
           <p className="mono text-xs text-[#0A0A0A]/40 mt-6">No credit card · Setup in one afternoon</p>
         </div>
 
-        {/* Signature element: a "solved doubt" notebook card */}
         <div className="relative">
           <div className="absolute -top-4 -left-4 w-full h-full rounded-2xl bg-[#0A0A0A]/15 -z-10" />
           <div className="bg-white rounded-2xl border border-[#0A0A0A]/10 shadow-[0_8px_30px_rgba(0,0,0,0.06)] p-6">
@@ -283,7 +290,7 @@ export default function DoubtSolveLanding() {
         <div className="max-w-6xl mx-auto px-8 lg:px-16 py-12 grid grid-cols-2 md:grid-cols-4 gap-8">
           {stats.map((s) => (
             <div key={s.label}>
-              <div className="sans text-3xl font-semibold text-[#FFFFFF]">{s.value}</div>
+              <div className="sans text-3xl font-semibold text-white">{s.value}</div>
               <div className="mono text-xs text-white/50 mt-1">{s.label}</div>
             </div>
           ))}
@@ -296,18 +303,15 @@ export default function DoubtSolveLanding() {
           <h2 className="sans text-3xl md:text-4xl font-semibold text-center">Everything a batch needs to stop waiting</h2>
           <p className="text-center text-[#0A0A0A]/60 mt-3 max-w-md mx-auto">Built for students, coaching institutes and the faculty running both.</p>
           <div className="grid md:grid-cols-3 gap-6 mt-14">
-            {offerings.map((o) => {
-              const Icon = o.icon;
-              return (
-                <div key={o.title} className="bg-white rounded-2xl p-8 border border-[#0A0A0A]/10 hover:shadow-[0_8px_30px_rgba(0,0,0,0.06)] transition-shadow">
-                  <div className="w-12 h-12 rounded-xl bg-[#0A0A0A]/10 flex items-center justify-center mb-5">
-                    <Icon className="w-6 h-6 text-[#0A0A0A]" />
-                  </div>
-                  <h3 className="sans text-xl font-semibold mb-2">{o.title}</h3>
-                  <p className="text-sm text-[#0A0A0A]/65 leading-relaxed">{o.desc}</p>
+            {offerings.map(({ icon: Icon, title, desc }) => (
+              <div key={title} className="bg-white rounded-2xl p-8 border border-[#0A0A0A]/10 hover:shadow-[0_8px_30px_rgba(0,0,0,0.06)] transition-shadow">
+                <div className="w-12 h-12 rounded-xl bg-[#0A0A0A]/10 flex items-center justify-center mb-5">
+                  <Icon className="w-6 h-6 text-[#0A0A0A]" />
                 </div>
-              );
-            })}
+                <h3 className="sans text-xl font-semibold mb-2">{title}</h3>
+                <p className="text-sm text-[#0A0A0A]/65 leading-relaxed">{desc}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -332,20 +336,17 @@ export default function DoubtSolveLanding() {
         <h2 className="sans text-3xl font-semibold mb-2">Made for the way a coaching center actually runs</h2>
         <p className="text-[#0A0A0A]/60 mb-12 max-w-lg">Not a generic chatbot — a tool tuned to batches, boards, and faculty workflow.</p>
         <div className="grid md:grid-cols-2 gap-6">
-          {features.map((f) => {
-            const Icon = f.icon;
-            return (
-              <div key={f.title} className="flex gap-4 p-6 rounded-xl border border-[#0A0A0A]/10 bg-white">
-                <div className="w-10 h-10 shrink-0 rounded-lg bg-[#0A0A0A]/10 flex items-center justify-center">
-                  <Icon className="w-5 h-5 text-[#0A0A0A]" />
-                </div>
-                <div>
-                  <h3 className="sans font-semibold mb-1">{f.title}</h3>
-                  <p className="text-sm text-[#0A0A0A]/65 leading-relaxed">{f.desc}</p>
-                </div>
+          {features.map(({ icon: Icon, title, desc }) => (
+            <div key={title} className="flex gap-4 p-6 rounded-xl border border-[#0A0A0A]/10 bg-white">
+              <div className="w-10 h-10 shrink-0 rounded-lg bg-[#0A0A0A]/10 flex items-center justify-center">
+                <Icon className="w-5 h-5 text-[#0A0A0A]" />
               </div>
-            );
-          })}
+              <div>
+                <h3 className="sans font-semibold mb-1">{title}</h3>
+                <p className="text-sm text-[#0A0A0A]/65 leading-relaxed">{desc}</p>
+              </div>
+            </div>
+          ))}
         </div>
       </section>
 
@@ -353,13 +354,13 @@ export default function DoubtSolveLanding() {
       <section className="max-w-6xl mx-auto px-8 lg:px-16 py-16">
         <div className="bg-[#0A0A0A] text-white rounded-2xl p-10 md:p-14 grid md:grid-cols-[1fr_auto] gap-8 items-center">
           <div>
-            <MessageSquareText className="w-8 h-8 text-[#FFFFFF] mb-4" />
+            <MessageSquareText className="w-8 h-8 text-white mb-4" />
             <p className="sans text-2xl leading-snug">
               "Our after-class doubt queue used to run till 9pm. Now it clears itself by 6, and our faculty only step in for the genuinely hard ones."
             </p>
             <p className="mono text-sm text-white/50 mt-6">— Director, Aakash Foundation centre, Indore</p>
           </div>
-          <button className="sans whitespace-nowrap font-medium px-6 py-3 rounded-md bg-[#0A0A0A] text-white hover:bg-[#262626] transition-colors inline-flex items-center gap-2 justify-center">
+          <button className="sans whitespace-nowrap font-medium px-6 py-3 rounded-md bg-white text-[#0A0A0A] hover:bg-white/90 transition-colors inline-flex items-center gap-2 justify-center">
             Talk to us <ArrowRight className="w-4 h-4" />
           </button>
         </div>
