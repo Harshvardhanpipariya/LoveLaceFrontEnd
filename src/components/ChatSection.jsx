@@ -3,7 +3,7 @@ import {
   Sparkles, Send, Plus, FolderPlus, Folder, FolderOpen,
   MessageSquare, ChevronRight, ChevronDown, Trash2,
   Edit3, Check, X, MoreHorizontal, Search, BookOpen,
-  FileText, Maximize2, ChevronLeft, Eye,
+  FileText, Maximize2, ChevronLeft, Eye, Menu, Book,
 } from 'lucide-react';
 
 const FONTS = `@import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@400;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');`;
@@ -50,14 +50,25 @@ const fakeAI = async (question) => {
   return `Great question! Here's a step-by-step breakdown for: "${question.slice(0, 60)}${question.length > 60 ? '…' : ''}"\n\n1. Identify the key concept involved.\n2. Write down the relevant formula or principle.\n3. Substitute the given values carefully.\n4. Solve and verify the units.\n\nIf you need a deeper explanation of any step, just ask!`;
 };
 
+/* ── subject list (replaces PDF docs) ── */
+const SUBJECTS = [
+  { id: 's1', name: 'Physics', icon: '⚛️', description: 'Mechanics, Thermodynamics, Optics, Electromagnetism' },
+  { id: 's2', name: 'Mathematics', icon: '📐', description: 'Algebra, Calculus, Trigonometry, Statistics' },
+  { id: 's3', name: 'Chemistry', icon: '🧪', description: 'Organic, Inorganic, Physical Chemistry' },
+  { id: 's4', name: 'Biology', icon: '🧬', description: 'Cell Biology, Genetics, Ecology, Human Anatomy' },
+  { id: 's5', name: 'Computer Science', icon: '💻', description: 'Programming, Data Structures, Algorithms, AI' },
+  { id: 's6', name: 'History', icon: '📜', description: 'Ancient, Medieval, Modern World History' },
+  { id: 's7', name: 'Literature', icon: '📚', description: 'Poetry, Prose, Drama, Literary Criticism' },
+];
+
 /* ═══════════════════════════════════════════════════════════════════════════
-   Sidebar
+   Sidebar (Mobile Friendly with Drawer)
 ═══════════════════════════════════════════════════════════════════════════ */
-const Sidebar = ({ folders, chats, activeChatId, onSelectChat, onNewChat, onNewFolder, onDeleteChat, onRenameFolder, onDeleteFolder, onToggleFolder, onMoveChat }) => {
+const Sidebar = ({ folders, chats, activeChatId, onSelectChat, onNewChat, onNewFolder, onDeleteChat, onRenameFolder, onDeleteFolder, onToggleFolder, onMoveChat, mobileOpen, setMobileOpen }) => {
   const [editFolderId, setEditFolderId]     = useState(null);
   const [editFolderName, setEditFolderName] = useState('');
   const [search, setSearch]                 = useState('');
-  const [menuChat, setMenuChat]             = useState(null); // chat id with open context menu
+  const [menuChat, setMenuChat]             = useState(null);
 
   const filtered = search.trim()
     ? chats.filter(c => c.title.toLowerCase().includes(search.toLowerCase()))
@@ -69,10 +80,15 @@ const Sidebar = ({ folders, chats, activeChatId, onSelectChat, onNewChat, onNewF
   const SANS  = { fontFamily: "'Space Grotesk', sans-serif" };
   const MONO  = { fontFamily: "'JetBrains Mono', monospace" };
 
+  const handleSelectChat = (id) => {
+    onSelectChat(id);
+    if (window.innerWidth < 1024) setMobileOpen(false);
+  };
+
   const ChatRow = ({ chat }) => (
     <div
       className={`group relative flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer transition-colors ${activeChatId === chat.id ? 'bg-[#0A0A0A] text-white' : 'hover:bg-[#0A0A0A]/06 text-[#0A0A0A]/70'}`}
-      onClick={() => onSelectChat(chat.id)}
+      onClick={() => handleSelectChat(chat.id)}
     >
       <MessageSquare className="w-3.5 h-3.5 shrink-0 opacity-60" />
       <span className="text-xs truncate flex-1" style={SANS}>{chat.title}</span>
@@ -101,152 +117,170 @@ const Sidebar = ({ folders, chats, activeChatId, onSelectChat, onNewChat, onNewF
   );
 
   return (
-    <aside className="w-64 shrink-0 bg-[#F8F8F7] border-r border-[#0A0A0A]/08 flex flex-col h-full">
-
-      {/* Header */}
-      <div className="px-4 pt-5 pb-3 border-b border-[#0A0A0A]/08">
-        <div className="flex items-center gap-2 mb-4">
-          <div className="w-6 h-6 rounded-md bg-[#0A0A0A] flex items-center justify-center">
-            <Sparkles className="w-3.5 h-3.5 text-white" />
+    <>
+      {/* Overlay for mobile */}
+      {mobileOpen && (
+        <div 
+          className="fixed inset-0 bg-black/30 z-40 lg:hidden transition-opacity duration-300"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+      
+      <aside className={`
+        fixed top-0 left-0 z-50 h-full w-72 bg-[#F8F8F7] border-r border-[#0A0A0A]/08 flex flex-col
+        transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 lg:w-64 lg:z-auto
+        ${mobileOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'}
+      `}>
+        {/* Mobile header with close button */}
+        <div className="flex items-center justify-between lg:hidden px-4 pt-4 pb-3 border-b border-[#0A0A0A]/08">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-md bg-[#0A0A0A] flex items-center justify-center">
+              <Sparkles className="w-3.5 h-3.5 text-white" />
+            </div>
+            <span className="font-semibold text-sm text-[#0A0A0A]" style={SANS}>Hal Karo</span>
           </div>
-          <span className="font-semibold text-sm text-[#0A0A0A]" style={SANS}>Hal Karo</span>
+          <button 
+            onClick={() => setMobileOpen(false)}
+            className="p-1.5 rounded-md hover:bg-[#0A0A0A]/06 transition-colors"
+          >
+            <X className="w-5 h-5 text-[#0A0A0A]/60" />
+          </button>
         </div>
-        {/* Search */}
-        <div className="flex items-center gap-2 bg-white border border-[#0A0A0A]/12 rounded-md px-2.5 py-1.5">
-          <Search className="w-3.5 h-3.5 text-[#0A0A0A]/35 shrink-0" />
-          <input
-            value={search} onChange={e => setSearch(e.target.value)}
-            placeholder="Search chats…"
-            className="flex-1 text-xs outline-none bg-transparent placeholder:text-[#0A0A0A]/30"
-            style={SANS}
-          />
+
+        {/* Header */}
+        <div className="px-4 pt-5 pb-3 border-b border-[#0A0A0A]/08 hidden lg:block">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-6 h-6 rounded-md bg-[#0A0A0A] flex items-center justify-center">
+              <Sparkles className="w-3.5 h-3.5 text-white" />
+            </div>
+            <span className="font-semibold text-sm text-[#0A0A0A]" style={SANS}>Hal Karo</span>
+          </div>
+          {/* Search */}
+          <div className="flex items-center gap-2 bg-white border border-[#0A0A0A]/12 rounded-md px-2.5 py-1.5">
+            <Search className="w-3.5 h-3.5 text-[#0A0A0A]/35 shrink-0" />
+            <input
+              value={search} onChange={e => setSearch(e.target.value)}
+              placeholder="Search chats…"
+              className="flex-1 text-xs outline-none bg-transparent placeholder:text-[#0A0A0A]/30"
+              style={SANS}
+            />
+          </div>
         </div>
-      </div>
 
-      {/* New chat + new folder */}
-      <div className="px-3 pt-3 flex gap-2">
-        <button onClick={onNewChat}
-          className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md bg-[#0A0A0A] text-white text-xs font-medium hover:bg-[#262626] transition-colors"
-          style={SANS}>
-          <Plus className="w-3.5 h-3.5" /> New chat
-        </button>
-        <button onClick={onNewFolder}
-          className="p-1.5 rounded-md border border-[#0A0A0A]/15 text-[#0A0A0A]/50 hover:border-[#0A0A0A]/35 hover:text-[#0A0A0A] transition-colors"
-          title="New folder">
-          <FolderPlus className="w-4 h-4" />
-        </button>
-      </div>
+        {/* Mobile search */}
+        <div className="px-4 pt-3 pb-2 lg:hidden">
+          <div className="flex items-center gap-2 bg-white border border-[#0A0A0A]/12 rounded-md px-2.5 py-1.5">
+            <Search className="w-3.5 h-3.5 text-[#0A0A0A]/35 shrink-0" />
+            <input
+              value={search} onChange={e => setSearch(e.target.value)}
+              placeholder="Search chats…"
+              className="flex-1 text-xs outline-none bg-transparent placeholder:text-[#0A0A0A]/30"
+              style={SANS}
+            />
+          </div>
+        </div>
 
-      {/* Tree */}
-      <div className="flex-1 overflow-y-auto px-3 pt-3 pb-4 space-y-1" onClick={() => setMenuChat(null)}>
+        {/* New chat + new folder */}
+        <div className="px-3 pt-3 flex gap-2">
+          <button onClick={() => { onNewChat(); if (window.innerWidth < 1024) setMobileOpen(false); }}
+            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md bg-[#0A0A0A] text-white text-xs font-medium hover:bg-[#262626] transition-colors"
+            style={SANS}>
+            <Plus className="w-3.5 h-3.5" /> New chat
+          </button>
+          <button onClick={onNewFolder}
+            className="p-1.5 rounded-md border border-[#0A0A0A]/15 text-[#0A0A0A]/50 hover:border-[#0A0A0A]/35 hover:text-[#0A0A0A] transition-colors shrink-0"
+            title="New folder">
+            <FolderPlus className="w-4 h-4" />
+          </button>
+        </div>
 
-        {/* Search results */}
-        {filtered ? (
-          <>
-            <p className="text-[10px] uppercase tracking-widest text-[#0A0A0A]/30 px-1 mb-2" style={MONO}>Results</p>
-            {filtered.length === 0
-              ? <p className="text-xs text-[#0A0A0A]/35 px-1" style={SANS}>No chats found.</p>
-              : filtered.map(c => <ChatRow key={c.id} chat={c} />)
-            }
-          </>
-        ) : (
-          folders.map(folder => {
-            const folderChats = chats.filter(c => c.folderId === folder.id);
-            return (
-              <div key={folder.id}>
-                {/* Folder row */}
-                <div className="group flex items-center gap-1.5 px-1 py-1 rounded-md hover:bg-[#0A0A0A]/05 cursor-pointer"
-                  onClick={() => onToggleFolder(folder.id)}>
-                  <button className="text-[#0A0A0A]/40 shrink-0">
-                    {folder.open ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
-                  </button>
-                  {folder.open
-                    ? <FolderOpen className="w-3.5 h-3.5 text-[#0A0A0A]/50 shrink-0" />
-                    : <Folder     className="w-3.5 h-3.5 text-[#0A0A0A]/50 shrink-0" />
-                  }
-                  {editFolderId === folder.id ? (
-                    <input
-                      autoFocus
-                      value={editFolderName}
-                      onChange={e => setEditFolderName(e.target.value)}
-                      onKeyDown={e => { if (e.key === 'Enter') commitRenameFolder(); if (e.key === 'Escape') setEditFolderId(null); }}
-                      className="flex-1 text-xs outline-none bg-transparent border-b border-[#0A0A0A]/30"
-                      style={SANS}
-                      onClick={e => e.stopPropagation()}
-                    />
-                  ) : (
-                    <span className="flex-1 text-xs font-medium text-[#0A0A0A]/70 truncate" style={SANS}>{folder.name}</span>
-                  )}
-                  <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
-                    <button className="p-0.5 text-[#0A0A0A]/35 hover:text-[#0A0A0A]" onClick={() => startRenameFolder(folder)}>
-                      <Edit3 className="w-3 h-3" />
+        {/* Tree */}
+        <div className="flex-1 overflow-y-auto px-3 pt-3 pb-4 space-y-1" onClick={() => setMenuChat(null)}>
+
+          {/* Search results */}
+          {filtered ? (
+            <>
+              <p className="text-[10px] uppercase tracking-widest text-[#0A0A0A]/30 px-1 mb-2" style={MONO}>Results</p>
+              {filtered.length === 0
+                ? <p className="text-xs text-[#0A0A0A]/35 px-1" style={SANS}>No chats found.</p>
+                : filtered.map(c => <ChatRow key={c.id} chat={c} />)
+              }
+            </>
+          ) : (
+            folders.map(folder => {
+              const folderChats = chats.filter(c => c.folderId === folder.id);
+              return (
+                <div key={folder.id}>
+                  {/* Folder row */}
+                  <div className="group flex items-center gap-1.5 px-1 py-1 rounded-md hover:bg-[#0A0A0A]/05 cursor-pointer"
+                    onClick={() => onToggleFolder(folder.id)}>
+                    <button className="text-[#0A0A0A]/40 shrink-0">
+                      {folder.open ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
                     </button>
-                    <button className="p-0.5 text-[#0A0A0A]/35 hover:text-red-500" onClick={() => onDeleteFolder(folder.id)}>
-                      <Trash2 className="w-3 h-3" />
-                    </button>
-                  </div>
-                </div>
-                {/* Chats inside folder */}
-                {folder.open && (
-                  <div className="ml-5 mt-0.5 space-y-0.5 border-l border-[#0A0A0A]/08 pl-2">
-                    {folderChats.length === 0
-                      ? <p className="text-[11px] text-[#0A0A0A]/25 py-1 px-1" style={SANS}>No chats yet</p>
-                      : folderChats.map(c => <ChatRow key={c.id} chat={c} />)
+                    {folder.open
+                      ? <FolderOpen className="w-3.5 h-3.5 text-[#0A0A0A]/50 shrink-0" />
+                      : <Folder     className="w-3.5 h-3.5 text-[#0A0A0A]/50 shrink-0" />
                     }
+                    {editFolderId === folder.id ? (
+                      <input
+                        autoFocus
+                        value={editFolderName}
+                        onChange={e => setEditFolderName(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter') commitRenameFolder(); if (e.key === 'Escape') setEditFolderId(null); }}
+                        className="flex-1 text-xs outline-none bg-transparent border-b border-[#0A0A0A]/30"
+                        style={SANS}
+                        onClick={e => e.stopPropagation()}
+                      />
+                    ) : (
+                      <span className="flex-1 text-xs font-medium text-[#0A0A0A]/70 truncate" style={SANS}>{folder.name}</span>
+                    )}
+                    <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+                      <button className="p-0.5 text-[#0A0A0A]/35 hover:text-[#0A0A0A]" onClick={() => startRenameFolder(folder)}>
+                        <Edit3 className="w-3 h-3" />
+                      </button>
+                      <button className="p-0.5 text-[#0A0A0A]/35 hover:text-red-500" onClick={() => onDeleteFolder(folder.id)}>
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
                   </div>
-                )}
+                  {/* Chats inside folder */}
+                  {folder.open && (
+                    <div className="ml-5 mt-0.5 space-y-0.5 border-l border-[#0A0A0A]/08 pl-2">
+                      {folderChats.length === 0
+                        ? <p className="text-[11px] text-[#0A0A0A]/25 py-1 px-1" style={SANS}>No chats yet</p>
+                        : folderChats.map(c => <ChatRow key={c.id} chat={c} />)
+                      }
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
+
+          {/* Uncategorized */}
+          {!filtered && (() => {
+            const loose = chats.filter(c => !folders.find(f => f.id === c.folderId));
+            if (loose.length === 0) return null;
+            return (
+              <div>
+                <p className="text-[10px] uppercase tracking-widest text-[#0A0A0A]/30 px-1 mt-3 mb-1" style={MONO}>Unsorted</p>
+                <div className="space-y-0.5">{loose.map(c => <ChatRow key={c.id} chat={c} />)}</div>
               </div>
             );
-          })
-        )}
-
-        {/* Uncategorized */}
-        {!filtered && (() => {
-          const loose = chats.filter(c => !folders.find(f => f.id === c.folderId));
-          if (loose.length === 0) return null;
-          return (
-            <div>
-              <p className="text-[10px] uppercase tracking-widest text-[#0A0A0A]/30 px-1 mt-3 mb-1" style={MONO}>Unsorted</p>
-              <div className="space-y-0.5">{loose.map(c => <ChatRow key={c.id} chat={c} />)}</div>
-            </div>
-          );
-        })()}
-      </div>
-    </aside>
+          })()}
+        </div>
+      </aside>
+    </>
   );
 };
-
-/* ── seed documents (replace with your real doc list from API) ─────────── */
-const DOCS = [
-  {
-    id: 'd1', folder: 'Physics', name: 'Newton\'s Laws.pdf',
-    pages: 12, preview: 'Chapter 1: Laws of Motion\n\nNewton\'s first law states that an object at rest stays at rest and an object in motion stays in motion unless acted upon by a net external force.\n\nNewton\'s second law: F = ma, where F is net force, m is mass and a is acceleration.\n\nNewton\'s third law: For every action there is an equal and opposite reaction.',
-  },
-  {
-    id: 'd2', folder: 'Physics', name: 'Kinematics Notes.pdf',
-    pages: 8, preview: 'Chapter 2: Kinematics\n\nEquations of motion:\n• v = u + at\n• s = ut + ½at²\n• v² = u² + 2as\n\nProjectile motion: horizontal component is uniform, vertical component is uniformly accelerated under gravity g = 9.8 m/s².',
-  },
-  {
-    id: 'd3', folder: 'Mathematics', name: 'Integration.pdf',
-    pages: 20, preview: 'Chapter 5: Integration\n\nIndefinite Integrals:\n∫xⁿ dx = xⁿ⁺¹/(n+1) + C\n∫sin x dx = −cos x + C\n∫cos x dx = sin x + C\n∫eˣ dx = eˣ + C\n\nIntegration by Parts:\n∫u dv = uv − ∫v du\n\nLIATE rule for choosing u: Logarithm, Inverse trig, Algebraic, Trigonometric, Exponential.',
-  },
-  {
-    id: 'd4', folder: 'Chemistry', name: 'Organic Chemistry.pdf',
-    pages: 35, preview: 'Chapter 3: Organic Chemistry\n\nFunctional Groups:\n• Alkanes: −CH₃, −CH₂−\n• Alkenes: C=C double bond\n• Alkynes: C≡C triple bond\n• Alcohols: −OH group\n• Aldehydes: −CHO\n• Ketones: C=O (in chain)',
-  },
-  {
-    id: 'd5', folder: 'Mathematics', name: 'Trigonometry.pdf',
-    pages: 15, preview: 'Chapter 4: Trigonometry\n\nBasic Identities:\nsin²θ + cos²θ = 1\n1 + tan²θ = sec²θ\n1 + cot²θ = csc²θ\n\nAddition Formulas:\nsin(A+B) = sinA cosB + cosA sinB\ncos(A+B) = cosA cosB − sinA sinB',
-  },
-];
 
 /* ═══════════════════════════════════════════════════════════════════════════
    Compose Modal — opens when user clicks the input bar
 ═══════════════════════════════════════════════════════════════════════════ */
 const ComposeModal = ({ open, onClose, onSend, initialText = '' }) => {
-  const [text, setText]           = useState(initialText);
-  const [activeDoc, setActiveDoc] = useState(DOCS[0]);
-  const [docSearch, setDocSearch] = useState('');
+  const [text, setText] = useState(initialText);
+  const [activeSubject, setActiveSubject] = useState(SUBJECTS[0]);
+  const [subjectSearch, setSubjectSearch] = useState('');
   const [panelOpen, setPanelOpen] = useState(true);
   const textRef = useRef(null);
 
@@ -257,14 +291,12 @@ const ComposeModal = ({ open, onClose, onSend, initialText = '' }) => {
     }
   }, [open]);
 
-  const filteredDocs = docSearch.trim()
-    ? DOCS.filter(d => d.name.toLowerCase().includes(docSearch.toLowerCase()) || d.folder.toLowerCase().includes(docSearch.toLowerCase()))
-    : DOCS;
-
-  const grouped = filteredDocs.reduce((acc, d) => {
-    (acc[d.folder] = acc[d.folder] || []).push(d);
-    return acc;
-  }, {});
+  const filteredSubjects = subjectSearch.trim()
+    ? SUBJECTS.filter(s => 
+        s.name.toLowerCase().includes(subjectSearch.toLowerCase()) ||
+        s.description.toLowerCase().includes(subjectSearch.toLowerCase())
+      )
+    : SUBJECTS;
 
   const handleSend = () => {
     const q = text.trim();
@@ -292,16 +324,16 @@ const ComposeModal = ({ open, onClose, onSend, initialText = '' }) => {
         onClick={e => e.stopPropagation()}
       >
         {/* Modal topbar */}
-        <div className="flex items-center justify-between px-5 py-3 border-b border-[#0A0A0A]/08 shrink-0">
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-[#0A0A0A]/50" />
-            <span className="text-sm font-medium text-[#0A0A0A]" style={SANS}>Compose your doubt</span>
+        <div className="flex items-center justify-between px-4 sm:px-5 py-3 border-b border-[#0A0A0A]/08 shrink-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <Sparkles className="w-4 h-4 text-[#0A0A0A]/50 shrink-0" />
+            <span className="text-sm font-medium text-[#0A0A0A] truncate" style={SANS}>Compose your doubt</span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
             <button onClick={() => setPanelOpen(p => !p)}
-              className="flex items-center gap-1.5 text-xs text-[#0A0A0A]/45 hover:text-[#0A0A0A] transition-colors px-2 py-1 rounded-md hover:bg-[#0A0A0A]/05"
+              className="hidden sm:flex items-center gap-1.5 text-xs text-[#0A0A0A]/45 hover:text-[#0A0A0A] transition-colors px-2 py-1 rounded-md hover:bg-[#0A0A0A]/05"
               style={MONO}>
-              {panelOpen ? <><ChevronRight className="w-3.5 h-3.5" /> Hide docs</> : <><Eye className="w-3.5 h-3.5" /> Show docs</>}
+              {panelOpen ? <><ChevronRight className="w-3.5 h-3.5" /> Hide subjects</> : <><Eye className="w-3.5 h-3.5" /> Show subjects</>}
             </button>
             <button onClick={onClose} className="p-1 rounded-md text-[#0A0A0A]/40 hover:text-[#0A0A0A] hover:bg-[#0A0A0A]/06 transition-colors">
               <X className="w-4 h-4" />
@@ -309,8 +341,8 @@ const ComposeModal = ({ open, onClose, onSend, initialText = '' }) => {
           </div>
         </div>
 
-        {/* Body: compose + doc panel */}
-        <div className="flex flex-1 min-h-0">
+        {/* Body: compose + subject panel */}
+        <div className="flex flex-1 min-h-0 flex-col sm:flex-row">
 
           {/* Left: text compose */}
           <div className="flex flex-col flex-1 min-w-0">
@@ -320,23 +352,23 @@ const ComposeModal = ({ open, onClose, onSend, initialText = '' }) => {
               onChange={e => setText(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleSend(); }}
               placeholder={"Type your doubt in detail…\n\nTip: the more specific you are, the better the answer.\nE.g. \"Explain why mg·sin(θ) is the component along the incline and not mg·cos(θ)\""}
-              className="flex-1 resize-none outline-none text-[15px] leading-relaxed text-[#0A0A0A] placeholder:text-[#0A0A0A]/25 px-6 py-5 bg-white"
+              className="flex-1 resize-none outline-none text-[15px] leading-relaxed text-[#0A0A0A] placeholder:text-[#0A0A0A]/25 px-4 sm:px-6 py-4 sm:py-5 bg-white min-h-[200px]"
               style={SANS}
             />
 
             {/* Bottom action bar */}
-            <div className="px-5 py-3 border-t border-[#0A0A0A]/08 flex items-center justify-between shrink-0 gap-3">
+            <div className="px-4 sm:px-5 py-3 border-t border-[#0A0A0A]/08 flex flex-col sm:flex-row items-center justify-between shrink-0 gap-2 sm:gap-3">
               <p className="text-[11px] text-[#0A0A0A]/30" style={MONO}>
                 {text.length > 0 ? `${text.length} chars` : 'Ctrl+Enter to send'}
               </p>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 w-full sm:w-auto">
                 <button onClick={onClose}
-                  className="px-4 py-2 text-sm text-[#0A0A0A]/55 hover:text-[#0A0A0A] rounded-md border border-[#0A0A0A]/12 hover:border-[#0A0A0A]/30 transition-colors"
+                  className="flex-1 sm:flex-none px-4 py-2 text-sm text-[#0A0A0A]/55 hover:text-[#0A0A0A] rounded-md border border-[#0A0A0A]/12 hover:border-[#0A0A0A]/30 transition-colors"
                   style={SANS}>
                   Cancel
                 </button>
                 <button onClick={handleSend} disabled={!text.trim()}
-                  className="px-5 py-2 text-sm font-medium bg-[#0A0A0A] text-white rounded-md hover:bg-[#262626] transition-colors disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1.5"
+                  className="flex-1 sm:flex-none px-5 py-2 text-sm font-medium bg-[#0A0A0A] text-white rounded-md hover:bg-[#262626] transition-colors disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
                   style={SANS}>
                   <Send className="w-3.5 h-3.5" /> Send doubt
                 </button>
@@ -344,50 +376,56 @@ const ComposeModal = ({ open, onClose, onSend, initialText = '' }) => {
             </div>
           </div>
 
-          {/* Right: document panel */}
+          {/* Right: subject panel */}
           {panelOpen && (
-            <div className="w-72 shrink-0 border-l border-[#0A0A0A]/08 flex flex-col bg-[#F8F8F7]">
-
-              {/* Doc panel header */}
+            <div className="w-full sm:w-72 shrink-0 border-t sm:border-t-0 sm:border-l border-[#0A0A0A]/08 flex flex-col bg-[#F8F8F7] max-h-[300px] sm:max-h-none">
+              {/* Subject panel header */}
               <div className="px-4 pt-3 pb-2 border-b border-[#0A0A0A]/08">
-                <p className="text-[10px] uppercase tracking-widest text-[#0A0A0A]/35 mb-2" style={MONO}>Your Documents</p>
+                <p className="text-[10px] uppercase tracking-widest text-[#0A0A0A]/35 mb-2" style={MONO}>Subjects</p>
                 <div className="flex items-center gap-1.5 bg-white border border-[#0A0A0A]/12 rounded-md px-2.5 py-1.5">
                   <Search className="w-3 h-3 text-[#0A0A0A]/30 shrink-0" />
-                  <input value={docSearch} onChange={e => setDocSearch(e.target.value)}
-                    placeholder="Search docs…" className="flex-1 text-[11px] outline-none bg-transparent placeholder:text-[#0A0A0A]/25" style={SANS} />
+                  <input value={subjectSearch} onChange={e => setSubjectSearch(e.target.value)}
+                    placeholder="Search subjects…" className="flex-1 text-[11px] outline-none bg-transparent placeholder:text-[#0A0A0A]/25" style={SANS} />
                 </div>
               </div>
 
-              {/* Doc list */}
+              {/* Subject list */}
               <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1">
-                {Object.entries(grouped).map(([folder, docs]) => (
-                  <div key={folder}>
-                    <p className="text-[10px] uppercase tracking-widest text-[#0A0A0A]/30 px-1 py-1 mt-1" style={MONO}>{folder}</p>
-                    {docs.map(doc => (
-                      <button key={doc.id}
-                        onClick={() => setActiveDoc(doc)}
-                        className={`w-full text-left flex items-start gap-2 px-2 py-2 rounded-lg transition-colors ${activeDoc?.id === doc.id ? 'bg-[#0A0A0A] text-white' : 'hover:bg-[#0A0A0A]/06 text-[#0A0A0A]/70'}`}>
-                        <FileText className={`w-3.5 h-3.5 shrink-0 mt-0.5 ${activeDoc?.id === doc.id ? 'text-white/70' : 'text-[#0A0A0A]/35'}`} />
-                        <div className="min-w-0">
-                          <p className="text-[11px] font-medium truncate" style={SANS}>{doc.name}</p>
-                          <p className={`text-[10px] mt-0.5 ${activeDoc?.id === doc.id ? 'text-white/50' : 'text-[#0A0A0A]/35'}`} style={MONO}>{doc.pages} pages</p>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                ))}
+                {filteredSubjects.length === 0 ? (
+                  <p className="text-xs text-[#0A0A0A]/35 px-2 py-4 text-center" style={SANS}>No subjects found</p>
+                ) : (
+                  filteredSubjects.map(subject => (
+                    <button key={subject.id}
+                      onClick={() => setActiveSubject(subject)}
+                      className={`w-full text-left flex items-start gap-3 px-3 py-2.5 rounded-lg transition-colors ${
+                        activeSubject?.id === subject.id 
+                          ? 'bg-[#0A0A0A] text-white' 
+                          : 'hover:bg-[#0A0A0A]/06 text-[#0A0A0A]/70'
+                      }`}>
+                      <span className="text-lg shrink-0">{subject.icon}</span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[12px] font-medium truncate" style={SANS}>{subject.name}</p>
+                        <p className={`text-[10px] mt-0.5 truncate ${
+                          activeSubject?.id === subject.id ? 'text-white/60' : 'text-[#0A0A0A]/40'
+                        }`} style={MONO}>
+                          {subject.description}
+                        </p>
+                      </div>
+                    </button>
+                  ))
+                )}
               </div>
 
-              {/* Doc preview */}
-              {activeDoc && (
-                <div className="border-t border-[#0A0A0A]/08 p-4 max-h-[220px] overflow-y-auto bg-white">
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <FileText className="w-3 h-3 text-[#0A0A0A]/40" />
-                    <p className="text-[11px] font-medium text-[#0A0A0A]" style={SANS}>{activeDoc.name}</p>
+              {/* Subject details preview */}
+              {activeSubject && (
+                <div className="border-t border-[#0A0A0A]/08 p-4 bg-white">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <span className="text-lg">{activeSubject.icon}</span>
+                    <p className="text-[12px] font-medium text-[#0A0A0A]" style={SANS}>{activeSubject.name}</p>
                   </div>
-                  <pre className="text-[11px] leading-relaxed text-[#0A0A0A]/65 whitespace-pre-wrap" style={MONO}>
-                    {activeDoc.preview}
-                  </pre>
+                  <p className="text-[11px] leading-relaxed text-[#0A0A0A]/60" style={MONO}>
+                    {activeSubject.description}
+                  </p>
                 </div>
               )}
             </div>
@@ -410,7 +448,7 @@ const Bubble = ({ msg }) => {
           <Sparkles className="w-3.5 h-3.5 text-white" />
         </div>
       )}
-      <div className={`max-w-[72%] px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-line ${
+      <div className={`max-w-[85%] sm:max-w-[72%] px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-line ${
         isUser
           ? 'bg-[#0A0A0A] text-white rounded-tr-sm'
           : 'bg-white border border-[#0A0A0A]/10 text-[#0A0A0A] rounded-tl-sm shadow-[0_2px_8px_rgba(0,0,0,0.05)]'
@@ -433,7 +471,7 @@ const Bubble = ({ msg }) => {
 /* ═══════════════════════════════════════════════════════════════════════════
    Chat area
 ═══════════════════════════════════════════════════════════════════════════ */
-const ChatArea = ({ chat, onSend, onRenameChat, folders }) => {
+const ChatArea = ({ chat, onSend, onRenameChat, folders, onMenuToggle }) => {
   const [input,    setInput]    = useState('');
   const [thinking, setThinking] = useState(false);
   const [editTitle, setEditTitle] = useState(false);
@@ -460,44 +498,53 @@ const ChatArea = ({ chat, onSend, onRenameChat, folders }) => {
   const MONO = { fontFamily: "'JetBrains Mono', monospace" };
 
   if (!chat) return (
-    <div className="flex-1 flex flex-col items-center justify-center bg-white gap-4 text-[#0A0A0A]/30">
+    <div className="flex-1 flex flex-col items-center justify-center bg-white gap-4 text-[#0A0A0A]/30 p-4">
       <BookOpen className="w-10 h-10 opacity-20" />
-      <p className="text-sm" style={SANS}>Select a chat or start a new one</p>
+      <p className="text-sm text-center" style={SANS}>Select a chat or start a new one</p>
     </div>
   );
 
   return (
     <div className="flex-1 flex flex-col bg-white min-w-0">
 
-      {/* Top bar */}
-      <div className="h-14 border-b border-[#0A0A0A]/08 px-6 flex items-center justify-between shrink-0">
+      {/* Top bar with hamburger menu */}
+      <div className="h-14 border-b border-[#0A0A0A]/08 px-4 sm:px-6 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2 min-w-0">
+          <button 
+            onClick={onMenuToggle}
+            className="lg:hidden p-1 -ml-1.5 rounded-md hover:bg-[#0A0A0A]/06 text-[#0A0A0A]/60 transition-colors"
+            aria-label="Toggle sidebar"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
           {folder && (
-            <span className="text-[11px] text-[#0A0A0A]/35 flex items-center gap-1 shrink-0" style={MONO}>
+            <span className="text-[11px] text-[#0A0A0A]/35 flex items-center gap-1 shrink-0 hidden sm:flex" style={MONO}>
               <Folder className="w-3 h-3" />{folder.name}
               <ChevronRight className="w-3 h-3" />
             </span>
           )}
           {editTitle ? (
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 min-w-0">
               <input autoFocus value={titleVal} onChange={e => setTitleVal(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') { onRenameChat(chat.id, titleVal); setEditTitle(false); } if (e.key === 'Escape') setEditTitle(false); }}
-                className="text-sm font-semibold text-[#0A0A0A] outline-none border-b border-[#0A0A0A]/30 bg-transparent min-w-0"
+                className="text-sm font-semibold text-[#0A0A0A] outline-none border-b border-[#0A0A0A]/30 bg-transparent min-w-0 flex-1"
                 style={SANS} />
-              <button onClick={() => { onRenameChat(chat.id, titleVal); setEditTitle(false); }} className="text-[#0A0A0A]/40 hover:text-[#0A0A0A]"><Check className="w-3.5 h-3.5" /></button>
-              <button onClick={() => setEditTitle(false)} className="text-[#0A0A0A]/40 hover:text-[#0A0A0A]"><X className="w-3.5 h-3.5" /></button>
+              <button onClick={() => { onRenameChat(chat.id, titleVal); setEditTitle(false); }} className="text-[#0A0A0A]/40 hover:text-[#0A0A0A] shrink-0"><Check className="w-3.5 h-3.5" /></button>
+              <button onClick={() => setEditTitle(false)} className="text-[#0A0A0A]/40 hover:text-[#0A0A0A] shrink-0"><X className="w-3.5 h-3.5" /></button>
             </div>
           ) : (
-            <button onClick={() => setEditTitle(true)} className="text-sm font-semibold text-[#0A0A0A] hover:opacity-70 truncate text-left" style={SANS}>
+            <button onClick={() => setEditTitle(true)} className="text-sm font-semibold text-[#0A0A0A] hover:opacity-70 truncate text-left flex-1 min-w-0" style={SANS}>
               {chat.title}
             </button>
           )}
         </div>
-        <span className="text-[11px] text-[#0A0A0A]/30 shrink-0 ml-4" style={MONO}>{chat.messages.length} message{chat.messages.length !== 1 ? 's' : ''}</span>
+        <span className="text-[11px] text-[#0A0A0A]/30 shrink-0 ml-2" style={MONO}>
+          {chat.messages.length} msg{chat.messages.length !== 1 ? 's' : ''}
+        </span>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-6 py-6">
+      <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6">
         {chat.messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-center gap-3 text-[#0A0A0A]/30">
             <Sparkles className="w-8 h-8 opacity-20" />
@@ -532,20 +579,20 @@ const ChatArea = ({ chat, onSend, onRenameChat, folders }) => {
       />
 
       {/* Input bar — clicking opens the modal */}
-      <div className="border-t border-[#0A0A0A]/08 px-4 py-3 shrink-0">
+      <div className="border-t border-[#0A0A0A]/08 px-3 sm:px-4 py-3 shrink-0">
         <button
           onClick={() => !thinking && setModalOpen(true)}
           disabled={thinking}
-          className="w-full flex items-center gap-3 bg-[#F8F8F7] border border-[#0A0A0A]/12 rounded-xl px-4 py-3 hover:border-[#0A0A0A]/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-left group"
+          className="w-full flex items-center gap-2 sm:gap-3 bg-[#F8F8F7] border border-[#0A0A0A]/12 rounded-xl px-3 sm:px-4 py-3 hover:border-[#0A0A0A]/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-left group"
         >
-          <span className="flex-1 text-sm text-[#0A0A0A]/30 group-hover:text-[#0A0A0A]/45 transition-colors"
+          <span className="flex-1 text-sm text-[#0A0A0A]/30 group-hover:text-[#0A0A0A]/45 transition-colors truncate"
                 style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
             {thinking ? 'AI is thinking…' : 'Type your doubt…'}
           </span>
           <div className="flex items-center gap-2 shrink-0">
             <span className="text-[10px] text-[#0A0A0A]/25 hidden md:block"
                   style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-              opens with doc viewer
+              opens with subject list
             </span>
             <div className="w-7 h-7 rounded-lg bg-[#0A0A0A]/08 flex items-center justify-center group-hover:bg-[#0A0A0A] transition-colors">
               <Maximize2 className="w-3.5 h-3.5 text-[#0A0A0A]/40 group-hover:text-white transition-colors" />
@@ -568,6 +615,18 @@ export default function DoubtChat() {
   const [folders, setFolders]       = useState(seed.folders);
   const [chats,   setChats]         = useState(seed.chats);
   const [activeChatId, setActiveChatId] = useState('c1');
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Close mobile drawer when resizing to desktop
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) {
+        setMobileOpen(false);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const activeChat = chats.find(c => c.id === activeChatId) || null;
 
@@ -591,6 +650,7 @@ export default function DoubtChat() {
     setChats(c => [chat, ...c]);
     setActiveChatId(id);
     if (targetFolder) setFolders(f => f.map(x => x.id === targetFolder ? { ...x, open: true } : x));
+    if (window.innerWidth < 1024) setMobileOpen(false);
   };
   const deleteChat   = (id) => { setChats(c => c.filter(x => x.id !== id)); if (activeChatId === id) setActiveChatId(chats.find(x => x.id !== id)?.id || null); };
   const renameChat   = (id, title) => setChats(c => c.map(x => x.id === id ? { ...x, title } : x));
@@ -613,7 +673,7 @@ export default function DoubtChat() {
   };
 
   return (
-    <div className="h-screen flex bg-white text-[#0A0A0A] overflow-hidden" style={{ fontFamily: "'Source Serif 4', Georgia, serif" }}>
+    <div className="h-[93vh] flex bg-white text-[#0A0A0A] overflow-hidden relative" style={{ fontFamily: "'Source Serif 4', Georgia, serif" }}>
       <style>{FONTS}</style>
 
       <Sidebar
@@ -621,10 +681,12 @@ export default function DoubtChat() {
         onSelectChat={setActiveChatId} onNewChat={newChat} onNewFolder={newFolder}
         onDeleteChat={deleteChat} onRenameFolder={renameFolder} onDeleteFolder={deleteFolder}
         onToggleFolder={toggleFolder} onMoveChat={moveChat}
+        mobileOpen={mobileOpen} setMobileOpen={setMobileOpen}
       />
 
       <ChatArea
         chat={activeChat} onSend={sendMessage} onRenameChat={renameChat} folders={folders}
+        onMenuToggle={() => setMobileOpen(true)}
       />
     </div>
   );

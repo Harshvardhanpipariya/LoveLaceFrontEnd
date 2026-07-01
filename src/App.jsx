@@ -43,12 +43,13 @@ function App() {
               </ProtectedRoute>
             } />
 
+
             <Route path="/" element={
               <LandingPage />} />
 
-              <Route path="/notesupload" element={<NotesUploadPage />}></Route>
+            <Route path="/notesupload" element={<NotesUploadPage />}></Route>
 
-              <Route path="/chatsection" element={<ChatSection />}></Route>
+            <Route path="/chatsection" element={<ChatSection />}></Route>
 
 
             <Route path="*" element={<Navigate to="/login" replace />} />

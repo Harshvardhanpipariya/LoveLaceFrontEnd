@@ -1,9 +1,9 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   FolderPlus, Folder, FolderOpen, FileText, Image as ImageIcon,
   FileSpreadsheet, Presentation, File as FileIcon, ChevronRight, ChevronDown,
   Trash2, Edit3, MoreHorizontal, Search, ExternalLink, BookOpen, Layers,
-  UploadCloud,
+  UploadCloud, Menu, X
 } from 'lucide-react';
 
 const FONTS = `@import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@400;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');`;
@@ -49,9 +49,9 @@ const COLORS = {
 const colorFor = (ext) => COLORS[ext] || '#0A0A0A';
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   Sidebar
+   Sidebar (Mobile Friendly with Drawer)
 ═══════════════════════════════════════════════════════════════════════════ */
-const Sidebar = ({ folders, notes, activeFolderId, onSelectFolder, onNewFolder, onRenameFolder, onDeleteFolder, onToggleFolder, onDeleteNote, onMoveNote }) => {
+const Sidebar = ({ folders, notes, activeFolderId, onSelectFolder, onNewFolder, onRenameFolder, onDeleteFolder, onToggleFolder, onDeleteNote, onMoveNote, mobileOpen, setMobileOpen }) => {
   const [editFolderId, setEditFolderId]     = useState(null);
   const [editFolderName, setEditFolderName] = useState('');
   const [search, setSearch]                 = useState('');
@@ -63,6 +63,11 @@ const Sidebar = ({ folders, notes, activeFolderId, onSelectFolder, onNewFolder, 
 
   const startRename = (f) => { setEditFolderId(f.id); setEditFolderName(f.name); };
   const commitRename = () => { onRenameFolder(editFolderId, editFolderName); setEditFolderId(null); };
+
+  const handleSelectFolder = (id) => {
+    onSelectFolder(id);
+    if (window.innerWidth < 1024) setMobileOpen(false);
+  };
 
   const NoteRow = ({ note }) => {
     const Icon = iconFor(note.ext);
@@ -96,121 +101,163 @@ const Sidebar = ({ folders, notes, activeFolderId, onSelectFolder, onNewFolder, 
   };
 
   return (
-    <aside className="w-64 shrink-0 bg-[#F8F8F7] border-r border-[#0A0A0A]/08 flex flex-col h-full">
-
-      {/* Header */}
-      <div className="px-4 pt-5 pb-3 border-b border-[#0A0A0A]/08">
-        <div className="flex items-center gap-2 mb-4">
-          <div className="w-6 h-6 rounded-md bg-[#0A0A0A] flex items-center justify-center">
-            <BookOpen className="w-3.5 h-3.5 text-white" />
+    <>
+      {/* Overlay for mobile */}
+      {mobileOpen && (
+        <div 
+          className="fixed inset-0 bg-black/30 z-40 lg:hidden transition-opacity duration-300"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+      
+      <aside className={`
+        fixed top-0 left-0 z-50 h-full w-72 bg-[#F8F8F7] border-r border-[#0A0A0A]/08 flex flex-col
+        transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 lg:w-64 lg:z-auto
+        ${mobileOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'}
+      `}>
+        {/* Mobile header with close button */}
+        <div className="flex items-center justify-between lg:hidden px-4 pt-4 pb-3 border-b border-[#0A0A0A]/08">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-md bg-[#0A0A0A] flex items-center justify-center">
+              <BookOpen className="w-3.5 h-3.5 text-white" />
+            </div>
+            <span className="font-semibold text-sm text-[#0A0A0A]" style={SANS}>Hal Karo · Notes</span>
           </div>
-          <span className="font-semibold text-sm text-[#0A0A0A]" style={SANS}>Hal Karo · Notes</span>
+          <button 
+            onClick={() => setMobileOpen(false)}
+            className="p-1.5 rounded-md hover:bg-[#0A0A0A]/06 transition-colors"
+          >
+            <X className="w-5 h-5 text-[#0A0A0A]/60" />
+          </button>
         </div>
-        {/* Search */}
-        <div className="flex items-center gap-2 bg-white border border-[#0A0A0A]/12 rounded-md px-2.5 py-1.5">
-          <Search className="w-3.5 h-3.5 text-[#0A0A0A]/35 shrink-0" />
-          <input
-            value={search} onChange={e => setSearch(e.target.value)}
-            placeholder="Search notes…"
-            className="flex-1 text-xs outline-none bg-transparent placeholder:text-[#0A0A0A]/30"
-            style={SANS}
-          />
+
+        {/* Header */}
+        <div className="px-4 pt-5 pb-3 border-b border-[#0A0A0A]/08 hidden lg:block">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-6 h-6 rounded-md bg-[#0A0A0A] flex items-center justify-center">
+              <BookOpen className="w-3.5 h-3.5 text-white" />
+            </div>
+            <span className="font-semibold text-sm text-[#0A0A0A]" style={SANS}>Hal Karo · Notes</span>
+          </div>
+          {/* Search */}
+          <div className="flex items-center gap-2 bg-white border border-[#0A0A0A]/12 rounded-md px-2.5 py-1.5">
+            <Search className="w-3.5 h-3.5 text-[#0A0A0A]/35 shrink-0" />
+            <input
+              value={search} onChange={e => setSearch(e.target.value)}
+              placeholder="Search notes…"
+              className="flex-1 text-xs outline-none bg-transparent placeholder:text-[#0A0A0A]/30"
+              style={SANS}
+            />
+          </div>
         </div>
-      </div>
 
-      {/* All notes + new folder */}
-      <div className="px-3 pt-3 flex gap-2">
-        <button onClick={() => onSelectFolder('ALL')}
-          className={`flex-1 flex items-center justify-between gap-1.5 py-1.5 px-2.5 rounded-md text-xs font-medium transition-colors ${
-            activeFolderId === 'ALL' ? 'bg-[#0A0A0A] text-white' : 'bg-white border border-[#0A0A0A]/12 text-[#0A0A0A]/70 hover:border-[#0A0A0A]/30'}`}
-          style={SANS}>
-          <span className="flex items-center gap-1.5"><Layers className="w-3.5 h-3.5" /> All notes</span>
-          <span className={activeFolderId === 'ALL' ? 'text-white/50' : 'text-[#0A0A0A]/35'} style={MONO}>{notes.length}</span>
-        </button>
-        <button onClick={onNewFolder}
-          className="p-1.5 rounded-md border border-[#0A0A0A]/15 text-[#0A0A0A]/50 hover:border-[#0A0A0A]/35 hover:text-[#0A0A0A] transition-colors"
-          title="New folder">
-          <FolderPlus className="w-4 h-4" />
-        </button>
-      </div>
+        {/* Mobile search */}
+        <div className="px-4 pt-3 pb-2 lg:hidden">
+          <div className="flex items-center gap-2 bg-white border border-[#0A0A0A]/12 rounded-md px-2.5 py-1.5">
+            <Search className="w-3.5 h-3.5 text-[#0A0A0A]/35 shrink-0" />
+            <input
+              value={search} onChange={e => setSearch(e.target.value)}
+              placeholder="Search notes…"
+              className="flex-1 text-xs outline-none bg-transparent placeholder:text-[#0A0A0A]/30"
+              style={SANS}
+            />
+          </div>
+        </div>
 
-      {/* Tree */}
-      <div className="flex-1 overflow-y-auto px-3 pt-3 pb-4 space-y-1" onClick={() => setMenuNote(null)}>
+        {/* All notes + new folder */}
+        <div className="px-3 pt-3 flex gap-2">
+          <button onClick={() => handleSelectFolder('ALL')}
+            className={`flex-1 flex items-center justify-between gap-1.5 py-1.5 px-2.5 rounded-md text-xs font-medium transition-colors ${
+              activeFolderId === 'ALL' ? 'bg-[#0A0A0A] text-white' : 'bg-white border border-[#0A0A0A]/12 text-[#0A0A0A]/70 hover:border-[#0A0A0A]/30'}`}
+            style={SANS}>
+            <span className="flex items-center gap-1.5"><Layers className="w-3.5 h-3.5" /> All notes</span>
+            <span className={activeFolderId === 'ALL' ? 'text-white/50' : 'text-[#0A0A0A]/35'} style={MONO}>{notes.length}</span>
+          </button>
+          <button onClick={onNewFolder}
+            className="p-1.5 rounded-md border border-[#0A0A0A]/15 text-[#0A0A0A]/50 hover:border-[#0A0A0A]/35 hover:text-[#0A0A0A] transition-colors shrink-0"
+            title="New folder">
+            <FolderPlus className="w-4 h-4" />
+          </button>
+        </div>
 
-        {filtered ? (
-          <>
-            <p className="text-[10px] uppercase tracking-widest text-[#0A0A0A]/30 px-1 mb-2" style={MONO}>Results</p>
-            {filtered.length === 0
-              ? <p className="text-xs text-[#0A0A0A]/35 px-1" style={SANS}>No notes found.</p>
-              : filtered.map(n => <NoteRow key={n.id} note={n} />)
-            }
-          </>
-        ) : (
-          folders.map(folder => {
-            const folderNotes = notes.filter(n => n.folderId === folder.id);
-            return (
-              <div key={folder.id}>
-                {/* Folder row */}
-                <div className={`group flex items-center gap-1.5 px-1 py-1 rounded-md cursor-pointer transition-colors ${
-                    activeFolderId === folder.id ? 'bg-[#0A0A0A]/08' : 'hover:bg-[#0A0A0A]/05'}`}
-                  onClick={() => { onToggleFolder(folder.id); onSelectFolder(folder.id); }}>
-                  <button className="text-[#0A0A0A]/40 shrink-0">
-                    {folder.open ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
-                  </button>
-                  {folder.open
-                    ? <FolderOpen className="w-3.5 h-3.5 text-[#0A0A0A]/50 shrink-0" />
-                    : <Folder     className="w-3.5 h-3.5 text-[#0A0A0A]/50 shrink-0" />
-                  }
-                  {editFolderId === folder.id ? (
-                    <input
-                      autoFocus
-                      value={editFolderName}
-                      onChange={e => setEditFolderName(e.target.value)}
-                      onKeyDown={e => { if (e.key === 'Enter') commitRename(); if (e.key === 'Escape') setEditFolderId(null); }}
-                      className="flex-1 text-xs outline-none bg-transparent border-b border-[#0A0A0A]/30"
-                      style={SANS}
-                      onClick={e => e.stopPropagation()}
-                    />
-                  ) : (
-                    <span className="flex-1 text-xs font-medium text-[#0A0A0A]/70 truncate" style={SANS}>{folder.name}</span>
-                  )}
-                  <span className="text-[10px] text-[#0A0A0A]/30 shrink-0" style={MONO}>{folderNotes.length}</span>
-                  <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
-                    <button className="p-0.5 text-[#0A0A0A]/35 hover:text-[#0A0A0A]" onClick={() => startRename(folder)}>
-                      <Edit3 className="w-3 h-3" />
+        {/* Tree */}
+        <div className="flex-1 overflow-y-auto px-3 pt-3 pb-4 space-y-1" onClick={() => setMenuNote(null)}>
+
+          {filtered ? (
+            <>
+              <p className="text-[10px] uppercase tracking-widest text-[#0A0A0A]/30 px-1 mb-2" style={MONO}>Results</p>
+              {filtered.length === 0
+                ? <p className="text-xs text-[#0A0A0A]/35 px-1" style={SANS}>No notes found.</p>
+                : filtered.map(n => <NoteRow key={n.id} note={n} />)
+              }
+            </>
+          ) : (
+            folders.map(folder => {
+              const folderNotes = notes.filter(n => n.folderId === folder.id);
+              return (
+                <div key={folder.id}>
+                  {/* Folder row */}
+                  <div className={`group flex items-center gap-1.5 px-1 py-1 rounded-md cursor-pointer transition-colors ${
+                      activeFolderId === folder.id ? 'bg-[#0A0A0A]/08' : 'hover:bg-[#0A0A0A]/05'}`}
+                    onClick={() => { onToggleFolder(folder.id); handleSelectFolder(folder.id); }}>
+                    <button className="text-[#0A0A0A]/40 shrink-0">
+                      {folder.open ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
                     </button>
-                    <button className="p-0.5 text-[#0A0A0A]/35 hover:text-red-500" onClick={() => onDeleteFolder(folder.id)}>
-                      <Trash2 className="w-3 h-3" />
-                    </button>
-                  </div>
-                </div>
-                {/* Notes inside folder */}
-                {folder.open && (
-                  <div className="ml-5 mt-0.5 space-y-0.5 border-l border-[#0A0A0A]/08 pl-2">
-                    {folderNotes.length === 0
-                      ? <p className="text-[11px] text-[#0A0A0A]/25 py-1 px-1" style={SANS}>No notes yet</p>
-                      : folderNotes.map(n => <NoteRow key={n.id} note={n} />)
+                    {folder.open
+                      ? <FolderOpen className="w-3.5 h-3.5 text-[#0A0A0A]/50 shrink-0" />
+                      : <Folder     className="w-3.5 h-3.5 text-[#0A0A0A]/50 shrink-0" />
                     }
+                    {editFolderId === folder.id ? (
+                      <input
+                        autoFocus
+                        value={editFolderName}
+                        onChange={e => setEditFolderName(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter') commitRename(); if (e.key === 'Escape') setEditFolderId(null); }}
+                        className="flex-1 text-xs outline-none bg-transparent border-b border-[#0A0A0A]/30"
+                        style={SANS}
+                        onClick={e => e.stopPropagation()}
+                      />
+                    ) : (
+                      <span className="flex-1 text-xs font-medium text-[#0A0A0A]/70 truncate" style={SANS}>{folder.name}</span>
+                    )}
+                    <span className="text-[10px] text-[#0A0A0A]/30 shrink-0" style={MONO}>{folderNotes.length}</span>
+                    <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+                      <button className="p-0.5 text-[#0A0A0A]/35 hover:text-[#0A0A0A]" onClick={() => startRename(folder)}>
+                        <Edit3 className="w-3 h-3" />
+                      </button>
+                      <button className="p-0.5 text-[#0A0A0A]/35 hover:text-red-500" onClick={() => onDeleteFolder(folder.id)}>
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
                   </div>
-                )}
+                  {/* Notes inside folder */}
+                  {folder.open && (
+                    <div className="ml-5 mt-0.5 space-y-0.5 border-l border-[#0A0A0A]/08 pl-2">
+                      {folderNotes.length === 0
+                        ? <p className="text-[11px] text-[#0A0A0A]/25 py-1 px-1" style={SANS}>No notes yet</p>
+                        : folderNotes.map(n => <NoteRow key={n.id} note={n} />)
+                      }
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
+
+          {/* Unsorted */}
+          {!filtered && (() => {
+            const loose = notes.filter(n => !folders.find(f => f.id === n.folderId));
+            if (loose.length === 0) return null;
+            return (
+              <div>
+                <p className="text-[10px] uppercase tracking-widest text-[#0A0A0A]/30 px-1 mt-3 mb-1" style={MONO}>Unsorted</p>
+                <div className="space-y-0.5">{loose.map(n => <NoteRow key={n.id} note={n} />)}</div>
               </div>
             );
-          })
-        )}
-
-        {/* Unsorted */}
-        {!filtered && (() => {
-          const loose = notes.filter(n => !folders.find(f => f.id === n.folderId));
-          if (loose.length === 0) return null;
-          return (
-            <div>
-              <p className="text-[10px] uppercase tracking-widest text-[#0A0A0A]/30 px-1 mt-3 mb-1" style={MONO}>Unsorted</p>
-              <div className="space-y-0.5">{loose.map(n => <NoteRow key={n.id} note={n} />)}</div>
-            </div>
-          );
-        })()}
-      </div>
-    </aside>
+          })()}
+        </div>
+      </aside>
+    </>
   );
 };
 
@@ -260,7 +307,7 @@ const NoteCard = ({ note, onDelete, folderName }) => {
 /* ═══════════════════════════════════════════════════════════════════════════
    Main area
 ═══════════════════════════════════════════════════════════════════════════ */
-const MainArea = ({ folder, notes, folders, onUpload, onDelete }) => {
+const MainArea = ({ folder, notes, folders, onUpload, onDelete, onMenuToggle }) => {
   const [dragOver, setDragOver] = useState(false);
   const inputRef = useRef(null);
 
@@ -270,10 +317,17 @@ const MainArea = ({ folder, notes, folders, onUpload, onDelete }) => {
   return (
     <div className="flex-1 flex flex-col bg-white min-w-0">
 
-      {/* Top bar */}
-      <div className="h-14 border-b border-[#0A0A0A]/08 px-6 flex items-center justify-between shrink-0">
+      {/* Top bar with hamburger menu */}
+      <div className="h-14 border-b border-[#0A0A0A]/08 px-4 sm:px-6 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2 min-w-0">
-          {folder && <Folder className="w-3.5 h-3.5 text-[#0A0A0A]/40 shrink-0" />}
+          <button 
+            onClick={onMenuToggle}
+            className="lg:hidden p-1 -ml-1.5 rounded-md hover:bg-[#0A0A0A]/06 text-[#0A0A0A]/60 transition-colors"
+            aria-label="Toggle sidebar"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+          {folder && <Folder className="w-3.5 h-3.5 text-[#0A0A0A]/40 shrink-0 hidden sm:block" />}
           <span className="text-sm font-semibold text-[#0A0A0A] truncate" style={SANS}>{title}</span>
         </div>
         <span className="text-[11px] text-[#0A0A0A]/30 shrink-0 ml-4" style={MONO}>
@@ -283,7 +337,7 @@ const MainArea = ({ folder, notes, folders, onUpload, onDelete }) => {
 
       {/* Body */}
       <div
-        className="flex-1 overflow-y-auto px-6 py-6"
+        className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6"
         onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
         onDragLeave={() => setDragOver(false)}
         onDrop={(e) => { e.preventDefault(); setDragOver(false); handleFiles(e.dataTransfer.files); }}
@@ -292,15 +346,15 @@ const MainArea = ({ folder, notes, folders, onUpload, onDelete }) => {
           onChange={(e) => { handleFiles(e.target.files); e.target.value = ''; }} />
 
         <button onClick={() => inputRef.current?.click()}
-          className={`w-full mb-6 flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed py-10 transition-colors ${
+          className={`w-full mb-6 flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed py-8 sm:py-10 transition-colors ${
             dragOver ? 'border-[#0A0A0A]/50 bg-[#0A0A0A]/04' : 'border-[#0A0A0A]/15 hover:border-[#0A0A0A]/30 hover:bg-[#0A0A0A]/02'}`}>
           <div className="w-10 h-10 rounded-full bg-[#0A0A0A] flex items-center justify-center">
             <UploadCloud className="w-5 h-5 text-white" />
           </div>
-          <p className="text-sm font-medium text-[#0A0A0A]" style={SANS}>
+          <p className="text-sm font-medium text-[#0A0A0A] text-center px-2" style={SANS}>
             {dragOver ? 'Drop to upload' : 'Drag notes here, or click to browse'}
           </p>
-          <p className="text-[11px] text-[#0A0A0A]/35" style={MONO}>PDF, DOCX, PPTX, images, and more</p>
+          <p className="text-[11px] text-[#0A0A0A]/35 text-center px-2" style={MONO}>PDF, DOCX, PPTX, images, and more</p>
         </button>
 
         {notes.length === 0 ? (
@@ -309,7 +363,7 @@ const MainArea = ({ folder, notes, folders, onUpload, onDelete }) => {
             <p className="text-sm" style={SANS}>No notes here yet</p>
           </div>
         ) : (
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3">
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] sm:grid-cols-[repeat(auto-fill,minmax(200px,1fr))] md:grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3">
             {notes.map(n => (
               <NoteCard key={n.id} note={n} onDelete={onDelete}
                 folderName={!folder ? folders.find(f => f.id === n.folderId)?.name : null} />
@@ -334,6 +388,18 @@ export default function NotesUploadPage() {
   const [folders, setFolders] = useState(seed.folders);
   const [notes, setNotes]     = useState(seed.notes);
   const [activeFolderId, setActiveFolderId] = useState('ALL');
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Close mobile drawer when resizing to desktop
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) {
+        setMobileOpen(false);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   /* ── folder ops ── */
   const toggleFolder = (id) => setFolders(f => f.map(x => x.id === id ? { ...x, open: !x.open } : x));
@@ -382,7 +448,7 @@ export default function NotesUploadPage() {
   const visibleNotes = activeFolderId === 'ALL' ? notes : notes.filter(n => n.folderId === activeFolderId);
 
   return (
-    <div className="h-screen flex bg-white text-[#0A0A0A] overflow-hidden" style={{ fontFamily: "'Source Serif 4', Georgia, serif" }}>
+    <div className="h-[93vh] w-full flex bg-white text-[#0A0A0A] overflow-hidden relative" style={{ fontFamily: "'Source Serif 4', Georgia, serif" }}>
       <style>{FONTS}</style>
 
       <Sidebar
@@ -390,11 +456,13 @@ export default function NotesUploadPage() {
         onSelectFolder={selectFolder} onNewFolder={newFolder}
         onRenameFolder={renameFolder} onDeleteFolder={deleteFolder}
         onToggleFolder={toggleFolder} onDeleteNote={deleteNote} onMoveNote={moveNote}
+        mobileOpen={mobileOpen} setMobileOpen={setMobileOpen}
       />
 
       <MainArea
         folder={activeFolder} notes={visibleNotes} folders={folders}
         onUpload={uploadFiles} onDelete={deleteNote}
+        onMenuToggle={() => setMobileOpen(true)}
       />
     </div>
   );

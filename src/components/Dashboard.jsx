@@ -21,13 +21,13 @@ const Dashboard = () => {
 
   const [notes] = useState([
     { id: 1, title: "Operating System Notes", date: "2026-06-19", preview: "CPU Scheduling, Deadlocks, Memory Management..." },
-    { id: 2, title: "DBMS Notes",             date: "2026-06-18", preview: "Normalization, Transactions, SQL Queries..." },
-    { id: 3, title: "Computer Networks",       date: "2026-06-17", preview: "OSI Model, TCP/IP, Routing Protocols..." },
+    { id: 2, title: "DBMS Notes", date: "2026-06-18", preview: "Normalization, Transactions, SQL Queries..." },
+    { id: 3, title: "Computer Networks", date: "2026-06-17", preview: "OSI Model, TCP/IP, Routing Protocols..." },
   ]);
 
   useEffect(() => {
-    const token    = localStorage.getItem("token")  || sessionStorage.getItem("token");
-    const userData = localStorage.getItem("user")   || sessionStorage.getItem("user");
+    const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+    const userData = localStorage.getItem("user") || sessionStorage.getItem("user");
 
     if (!token || !userData) { navigate("/login", { replace: true }); return; }
 
@@ -67,18 +67,18 @@ const Dashboard = () => {
   }
 
   const userName = user?.name || user?.fullName || "User";
-  const initial  = userName.charAt(0).toUpperCase();
+  const initial = userName.charAt(0).toUpperCase();
 
   const navLinks = [
-    { label: "Dashboard",    icon: LayoutDashboard },
-    { label: "My Notes",     icon: BookOpen },
+    { label: "Dashboard", icon: LayoutDashboard },
+    { label: "My Notes", icon: BookOpen },
     { label: "AI Assistant", icon: Sparkles },
-    { label: "Settings",     icon: Settings },
+    { label: "Settings", icon: Settings },
   ];
 
   const stats = [
-    { label: "Total Notes",  value: "24",  icon: FileText },
-    { label: "AI Questions", value: "87",  icon: MessageSquare },
+    { label: "Total Notes", value: "24", icon: FileText },
+    { label: "AI Questions", value: "87", icon: MessageSquare },
     { label: "Storage Used", value: "45%", icon: Database },
   ];
 
@@ -108,7 +108,7 @@ const Dashboard = () => {
                     style={{
                       fontFamily: "'Space Grotesk', sans-serif",
                       background: activeNav === label ? "#0A0A0A" : "transparent",
-                      color:      activeNav === label ? "#FFFFFF" : "rgba(10,10,10,0.50)",
+                      color: activeNav === label ? "#FFFFFF" : "rgba(10,10,10,0.50)",
                     }}
                   >
                     <Icon className="w-3.5 h-3.5" /> {label}
@@ -227,7 +227,11 @@ const Dashboard = () => {
             <Upload className="w-5 h-5 text-white/55 mb-4 relative z-10" />
             <h3 className="font-semibold mb-1 relative z-10" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Upload New Notes</h3>
             <p className="text-white/50 text-sm mb-5 relative z-10">Upload PDF, DOCX, or TXT files to get AI-powered insights.</p>
-            <button className="relative z-10 flex items-center gap-1.5 px-4 py-2 bg-white text-[#0A0A0A] rounded-md text-sm font-medium hover:bg-white/90 transition-colors" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+            <button
+              onClick={() => navigate("/notesupload")}
+              className="relative z-10 flex items-center gap-1.5 px-4 py-2 bg-white text-[#0A0A0A] rounded-md text-sm font-medium hover:bg-white/90 transition-colors"
+              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+            >
               Upload Files <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -239,7 +243,11 @@ const Dashboard = () => {
             <Sparkles className="w-5 h-5 text-[#0A0A0A]/35 mb-4 relative z-10" />
             <h3 className="font-semibold text-[#0A0A0A] mb-1 relative z-10" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>AI Chat Assistant</h3>
             <p className="text-[#0A0A0A]/50 text-sm mb-5 relative z-10">Ask questions about your notes and get instant answers.</p>
-            <button onClick={handleAskAI} className="relative z-10 flex items-center gap-1.5 px-4 py-2 bg-[#0A0A0A] text-white rounded-md text-sm font-medium hover:bg-[#262626] transition-colors" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+            <button
+              onClick={() => navigate("/chatsection")}
+              className="relative z-10 flex items-center gap-1.5 px-4 py-2 bg-[#0A0A0A] text-white rounded-md text-sm font-medium hover:bg-[#262626] transition-colors"
+              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+            >
               Start Chatting <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>

@@ -3,6 +3,7 @@ import { ArrowRight, Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import Field from './Field';
+import axios from "axios";
 
 const SignupForm = ({ onSwitchToLogin }) => {
   const navigate = useNavigate();
@@ -38,17 +39,36 @@ const SignupForm = ({ onSwitchToLogin }) => {
   };
 
   const handleSignup = async () => {
-    if (!validateForm()) { toast.error('Please fix the highlighted errors.'); return; }
+    if (!validateForm()) {
+      toast.error("Please fix the highlighted errors.");
+      return;
+    }
+  
     try {
       setLoading(true);
-      await new Promise((resolve) => setTimeout(resolve, 1800));
-      toast.success('Account created successfully 🎉', {
-        duration: 3000,
-        style: { background: '#0A0A0A', color: '#FFFFFF', borderRadius: '14px', padding: '14px 18px' },
-      });
-      setTimeout(() => navigate('/home'), 1200);
+  
+      const response = await axios.post(
+        "https://ragbackend-qhct.onrender.com/api/auth/signup",
+        {
+          fullName: name,
+          email,
+          password,
+        }
+      );
+  
+      toast.success(response.data.message || "Account created successfully");
+  
+      localStorage.setItem(
+        "user",
+        JSON.stringify(response.data.user)
+      );
+  
+      setTimeout(() => navigate("/home"), 1200);
     } catch (error) {
-      toast.error(error?.response?.data?.message || 'Unable to create account.');
+      toast.error(
+        error.response?.data?.message ||
+        "Unable to create account."
+      );
     } finally {
       setLoading(false);
     }

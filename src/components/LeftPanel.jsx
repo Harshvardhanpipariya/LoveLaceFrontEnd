@@ -3,7 +3,7 @@ import { Sparkles } from 'lucide-react';
 
 const LeftPanel = () => {
   return (
-    <div className="flex-1 bg-[#0A0A0A] text-white flex flex-col justify-center items-center p-10 relative overflow-hidden">
+    <div className="flex-1 h-full bg-[#0A0A0A] text-white flex flex-col justify-center items-center p-10 relative overflow-hidden">
       <svg
         className="absolute inset-0 w-full h-full opacity-[0.06]"
         viewBox="0 0 100 140"
