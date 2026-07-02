@@ -8,7 +8,7 @@ import Field from "./Field";
 const LoginForm = ({ onSwitchToSignup }) => {
   const navigate = useNavigate();
 
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+  const API_URL = import.meta.env.VITE_API_URL || "https://ragbackend-qhct.onrender.com/api";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
